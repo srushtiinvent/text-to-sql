@@ -1,0 +1,7 @@
+.venv
+runs
+models
+data/cache
+data/finetune
+web/node_modules
+**/__pycache__

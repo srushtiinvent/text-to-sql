@@ -1,0 +1,6 @@
+original_column_name,column_name,column_description,data_format,value_description
+order_id,order id,unique id of the order,,
+customer_id,customer id,the customer who placed the order,,
+order_date,order date,date the order was placed,,YYYY-MM-DD
+status,order status,current status of the order,,completed = delivered and paid; cancelled = never paid; refunded = paid then money returned. Spending/revenue should only count completed orders.
+total_amount,total amount,order total in INR including all items,,

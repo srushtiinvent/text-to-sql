@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin_password
+    ports: ["5432:5432"]
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./data/demo/shop_postgres.sql:/docker-entrypoint-initdb.d/data/shop_postgres.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d shop"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      SHOP_PG_DSN: postgresql://t2s_reader:reader_password@postgres:5432/shop
+      T2S_CONFIG: /app/config.toml
+    ports: ["8000:8000"]
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+      - ./runs:/app/runs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # reach a gateway running on your machine
+    depends_on:
+      postgres:
+        condition: service_healthy

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+config.toml
+runs/
+data/cache/
+data/finetune/
+models/
+web/node_modules/
+web/dist/
+*.gguf

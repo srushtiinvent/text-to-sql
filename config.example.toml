@@ -1,0 +1,92 @@
+# Copy to config.toml and edit. Relative paths are resolved from this file's folder.
+
+[gateway]
+# Your LLM Gateway (OpenAI-compatible). The key is read from this environment variable.
+url = "http://localhost:8080"
+api_key_env = "GATEWAY_KEY"
+timeout_s = 60
+max_retries = 2
+
+[models]
+# Use whatever model names your gateway exposes. "auto" lets the gateway route.
+# Tip: use a *different* model for the judge than for most generators, and measure
+# self-preference bias with eval (see docs/evaluation.md).
+judge = "auto"
+clarify = "auto"
+embeddings = ""          # e.g. "text-embedding-004"; leave empty to use BM25 + value index only
+
+[generation]
+max_repairs = 2              # self-correction rounds after an execution error
+repair_empty_result = false  # ask the model to re-check queries that return 0 rows (ablate this)
+max_tokens = 1024
+
+# Diversity comes from prompt style, temperature and model. 5 candidates is a good default.
+[[generation.candidates]]
+model = "auto"
+prompt = "direct"
+temperature = 0.0
+
+[[generation.candidates]]
+model = "auto"
+prompt = "plan"
+temperature = 0.0
+
+[[generation.candidates]]
+model = "auto"
+prompt = "decompose"
+temperature = 0.0
+
+[[generation.candidates]]
+model = "auto"
+prompt = "direct"
+temperature = 0.7
+
+[[generation.candidates]]
+model = "auto"
+prompt = "plan"
+temperature = 0.7
+
+[retrieval]
+full_schema_column_threshold = 60   # schemas this small go into the prompt whole
+top_k_tables = 6
+max_columns_per_table = 40
+value_index_max_values_per_column = 5000
+value_index_max_value_length = 80
+value_match_threshold = 0.75
+use_embeddings = false
+
+[execution]
+timeout_s = 10
+row_limit = 10000
+preview_rows = 20
+
+[verify]
+distinguish = true
+judge = true
+judge_verify_single = true
+sample_sizes = [8, 32, 128, 512, 2048]
+ddmin_budget = 250
+seed = 7
+
+[confidence]
+threshold = 0.5
+weights_path = "data/confidence_weights.json"   # written by `python -m eval.calibrate`
+
+[eval]
+concurrency = 4      # questions in flight; keep low on free tiers
+
+[api]
+cors_origins = ["http://localhost:5173"]
+rate_limit_per_minute = 10   # per client IP; protects your gateway key on a public demo
+
+[databases.shop]
+dialect = "sqlite"
+path = "data/demo/databases/shop/shop.sqlite"
+description_dir = "data/demo/databases/shop/database_description"
+
+# Postgres version of the same demo data (docker compose up). Connect as the read-only role.
+[databases.shop_pg]
+dialect = "postgres"
+dsn_env = "SHOP_PG_DSN"   # e.g. postgresql://t2s_reader:reader@localhost:5432/shop
+
+# BIRD dev databases are added automatically by the eval runner from --db-root.

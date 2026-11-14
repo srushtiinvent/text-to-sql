@@ -1,0 +1,10 @@
+[project]
+name = "verified-text2sql"
+version = "0.1.0"
+description = "Text-to-SQL that verifies its answers by execution, distinguishing examples and a measured LLM judge"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

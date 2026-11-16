@@ -222,12 +222,14 @@ def render_schema(schema: Schema, tables: list[str] | None = None,
     for name in names:
         t = schema.tables[name]
         keep = set(columns[name]) if columns and name in columns else None
+        pk_cols = [c.name for c in t.columns if c.primary_key]
+        composite_pk = len(pk_cols) > 1  # e.g. order_items(order_id, product_id)
         lines = []
         for c in t.columns:
             if keep is not None and c.name not in keep:
                 continue
             parts = [f"  {quote_ident(c.name)} {c.type}".rstrip()]
-            if c.primary_key:
+            if c.primary_key and not composite_pk:
                 parts.append("PRIMARY KEY")
             notes = []
             if c.description and c.description.lower() != c.name.lower():
@@ -240,6 +242,8 @@ def render_schema(schema: Schema, tables: list[str] | None = None,
             if notes:
                 line += "  -- " + "; ".join(notes)
             lines.append(line)
+        if composite_pk:
+            lines.append("  PRIMARY KEY (" + ", ".join(quote_ident(c) for c in pk_cols) + ")")
         fks = [fk for fk in schema.foreign_keys if fk.table == name and fk.ref_table in names]
         for fk in fks:
             lines.append(f"  FOREIGN KEY ({quote_ident(fk.column)}) REFERENCES "

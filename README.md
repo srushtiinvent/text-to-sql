@@ -71,7 +71,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 python scripts/make_demo_db.py          # demo shop database (SQLite + Postgres dump)
 cp config.example.toml config.toml      # set model names your gateway exposes
-cp .env.example .env && export $(cat .env | xargs)   # GATEWAY_KEY=gw_...
+cp .env.example .env && set -a && source .env && set +a   # GATEWAY_KEY=gw_...
 pytest -q                               # offline tests, no LLM needed
 uvicorn api.main:app --reload --port 8000
 ```
@@ -80,6 +80,8 @@ uvicorn api.main:app --reload --port 8000
 curl -s localhost:8000/api/ask -H 'content-type: application/json' \
   -d '{"database":"shop","question":"Which customers spent more than 10,000 last month?","evidence":"last month refers to October 2026"}' | jq '.answer, .confidence'
 ```
+
+**Frontend:** in a second terminal, `cd web && npm install && npm run dev`, then open http://localhost:5173. The Ask page replays recorded examples without any model calls, and has a Live tab that streams each pipeline step. See [`web/README.md`](web/README.md).
 
 **Postgres demo:** `docker compose up` starts Postgres with the demo data and a read-only role, plus the API. Inside Docker, set `[gateway] url = "http://host.docker.internal:<port>"` to reach a gateway running on your machine.
 

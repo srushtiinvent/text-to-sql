@@ -34,7 +34,8 @@ class Config:
     gateway_url: str = "http://localhost:8080"
     gateway_key_env: str = "GATEWAY_KEY"
     gateway_timeout_s: float = 60.0
-    gateway_max_retries: int = 2
+    gateway_max_retries: int = 4
+    gateway_requests_per_minute: int = 0  # client-side pacing; 0 = off
 
     # models
     judge_model: str = "auto"
@@ -106,7 +107,8 @@ class Config:
 
 _SECTION_KEYS = {
     "gateway": {"url": "gateway_url", "api_key_env": "gateway_key_env",
-                "timeout_s": "gateway_timeout_s", "max_retries": "gateway_max_retries"},
+                "timeout_s": "gateway_timeout_s", "max_retries": "gateway_max_retries",
+                "requests_per_minute": "gateway_requests_per_minute"},
     "models": {"judge": "judge_model", "clarify": "clarify_model", "embeddings": "embedding_model"},
     "generation": {"max_repairs": "max_repairs", "repair_empty_result": "repair_empty_result",
                    "max_tokens": "max_tokens"},

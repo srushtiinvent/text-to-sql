@@ -5,7 +5,10 @@
 url = "http://localhost:8080"
 api_key_env = "GATEWAY_KEY"
 timeout_s = 60
-max_retries = 2
+max_retries = 4
+# Pace requests on the client so bursts (5 candidates at once) don't hit 429s.
+# Set just under your gateway key's per-minute limit; 0 disables pacing.
+requests_per_minute = 0
 
 [models]
 # Use whatever model names your gateway exposes. "auto" lets the gateway route.

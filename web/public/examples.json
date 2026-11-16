@@ -1,0 +1,778 @@
+[
+ {
+  "id": "e0ffb588f9a5",
+  "database": "shop",
+  "question": "Which customers spent more than 10,000 last month?",
+  "evidence": "last month refers to October 2026",
+  "dialect": "sqlite",
+  "retrieval": {
+   "mode": "full",
+   "tables": [
+    "customers",
+    "order_items",
+    "orders",
+    "payments",
+    "products"
+   ],
+   "columns": {
+    "customers": [
+     "customer_id",
+     "name",
+     "city",
+     "segment",
+     "signup_date"
+    ],
+    "order_items": [
+     "order_id",
+     "product_id",
+     "quantity",
+     "unit_price"
+    ],
+    "orders": [
+     "order_id",
+     "customer_id",
+     "order_date",
+     "status",
+     "total_amount"
+    ],
+    "payments": [
+     "payment_id",
+     "order_id",
+     "paid_at",
+     "amount",
+     "method"
+    ],
+    "products": [
+     "product_id",
+     "name",
+     "category",
+     "price"
+    ]
+   },
+   "table_scores": {},
+   "bridge_tables": [],
+   "value_matches": []
+  },
+  "candidates": [
+   {
+    "id": 0,
+    "label": "A",
+    "model": "gemini-3.1-flash-lite",
+    "prompt": "direct",
+    "temperature": 0.0,
+    "served_model": "gemini-3.1-flash-lite",
+    "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+    "attempts": [
+     {
+      "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "name"
+     ],
+     "rows": [
+      [
+       "Aarav Nair"
+      ],
+      [
+       "Rohan Singh"
+      ],
+      [
+       "Ananya Reddy"
+      ],
+      [
+       "Tara Rao"
+      ],
+      [
+       "Diya Sharma"
+      ]
+     ],
+     "row_count": 23,
+     "truncated": false,
+     "elapsed_ms": 3.43
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 1,
+    "label": "B",
+    "model": "openai/gpt-oss-20b",
+    "prompt": "plan",
+    "temperature": 0.0,
+    "served_model": "openai/gpt-oss-20b",
+    "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+    "attempts": [
+     {
+      "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "name"
+     ],
+     "rows": [
+      [
+       "Aarav Nair"
+      ],
+      [
+       "Rohan Singh"
+      ],
+      [
+       "Ananya Reddy"
+      ],
+      [
+       "Tara Rao"
+      ],
+      [
+       "Diya Sharma"
+      ]
+     ],
+     "row_count": 23,
+     "truncated": false,
+     "elapsed_ms": 2.29
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 2,
+    "label": "C",
+    "model": "gemini-3.1-flash-lite",
+    "prompt": "decompose",
+    "temperature": 0.0,
+    "served_model": "gemini-3.1-flash-lite",
+    "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+    "attempts": [
+     {
+      "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "name"
+     ],
+     "rows": [
+      [
+       "Zoya Mehta"
+      ],
+      [
+       "Aarav Nair"
+      ],
+      [
+       "Rohan Singh"
+      ],
+      [
+       "Ananya Reddy"
+      ],
+      [
+       "Tara Rao"
+      ]
+     ],
+     "row_count": 30,
+     "truncated": false,
+     "elapsed_ms": 3.77
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 1
+   },
+   {
+    "id": 3,
+    "label": "D",
+    "model": "openai/gpt-oss-20b",
+    "prompt": "direct",
+    "temperature": 0.7,
+    "served_model": "openai/gpt-oss-20b",
+    "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+    "attempts": [
+     {
+      "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "name"
+     ],
+     "rows": [
+      [
+       "Aarav Nair"
+      ],
+      [
+       "Rohan Singh"
+      ],
+      [
+       "Ananya Reddy"
+      ],
+      [
+       "Tara Rao"
+      ],
+      [
+       "Diya Sharma"
+      ]
+     ],
+     "row_count": 23,
+     "truncated": false,
+     "elapsed_ms": 2.5
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 4,
+    "label": "E",
+    "model": "gemini-3.1-flash-lite",
+    "prompt": "plan",
+    "temperature": 0.7,
+    "served_model": "gemini-3.1-flash-lite",
+    "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+    "attempts": [
+     {
+      "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "name"
+     ],
+     "rows": [
+      [
+       "Zoya Mehta"
+      ],
+      [
+       "Aarav Nair"
+      ],
+      [
+       "Rohan Singh"
+      ],
+      [
+       "Ananya Reddy"
+      ],
+      [
+       "Tara Rao"
+      ]
+     ],
+     "row_count": 30,
+     "truncated": false,
+     "elapsed_ms": 2.41
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 1
+   }
+  ],
+  "clusters": [
+   {
+    "id": 0,
+    "members": [
+     0,
+     1,
+     3
+    ],
+    "representative": 0,
+    "size": 3,
+    "representative_label": "A"
+   },
+   {
+    "id": 1,
+    "members": [
+     2,
+     4
+    ],
+    "representative": 2,
+    "size": 2,
+    "representative_label": "C"
+   }
+  ],
+  "distinguishing": {
+   "tables": {
+    "customers": {
+     "columns": [
+      "customer_id",
+      "name",
+      "city",
+      "segment",
+      "signup_date"
+     ],
+     "rows": [
+      [
+       63,
+       "Zoya Iyer",
+       "Jaipur",
+       "Corporate",
+       "2025-10-06"
+      ]
+     ]
+    },
+    "orders": {
+     "columns": [
+      "order_id",
+      "customer_id",
+      "order_date",
+      "status",
+      "total_amount"
+     ],
+     "rows": [
+      [
+       1277,
+       63,
+       "2026-10-31",
+       "cancelled",
+       21096.0
+      ]
+     ]
+    }
+   },
+   "outputs": {
+    "A": {
+     "columns": [
+      "name"
+     ],
+     "rows": []
+    },
+    "C": {
+     "columns": [
+      "name"
+     ],
+     "rows": [
+      [
+       "Zoya Iyer"
+      ]
+     ]
+    }
+   },
+   "sample_size": 512,
+   "tests_run": 61,
+   "rows_total": 2
+  },
+  "judge": {
+   "mode": "pick",
+   "choice": "A",
+   "confidence": 0.9,
+   "reason": "The other query counts a cancelled order as spending. The customer never paid for it, so it should not count.",
+   "issues": [],
+   "model": "openai/gpt-oss-20b",
+   "used_example": true
+  },
+  "judge_error": null,
+  "confidence": {
+   "score": 0.9129,
+   "features": {
+    "agreement": 0.6,
+    "margin": 0.2,
+    "valid_frac": 1.0,
+    "judge_support": 1.0,
+    "judge_confidence": 0.9,
+    "example_found": 1.0
+   },
+   "threshold": 0.5,
+   "abstained": false
+  },
+  "clarifying_question": null,
+  "answer": {
+   "candidate": "A",
+   "sql": "SELECT c.name\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\n  AND strftime('%Y-%m', o.order_date) = '2026-10'\nGROUP BY c.customer_id\nHAVING SUM(o.total_amount) > 10000",
+   "cluster": 0,
+   "columns": [
+    "name"
+   ],
+   "rows": [
+    [
+     "Aarav Nair"
+    ],
+    [
+     "Rohan Singh"
+    ],
+    [
+     "Ananya Reddy"
+    ],
+    [
+     "Tara Rao"
+    ],
+    [
+     "Diya Sharma"
+    ],
+    [
+     "Yash Sharma"
+    ],
+    [
+     "Zoya Mehta"
+    ],
+    [
+     "Reyansh Gupta"
+    ],
+    [
+     "Rohan Mehta"
+    ],
+    [
+     "Zoya Gupta"
+    ],
+    [
+     "Ishaan Gupta"
+    ],
+    [
+     "Vihaan Singh"
+    ],
+    [
+     "Neel Mehta"
+    ],
+    [
+     "Priya Iyer"
+    ],
+    [
+     "Saanvi Patel"
+    ],
+    [
+     "Tara Patel"
+    ],
+    [
+     "Vihaan Patel"
+    ],
+    [
+     "Tara Rao"
+    ],
+    [
+     "Aarav Nair"
+    ],
+    [
+     "Rohan Singh"
+    ]
+   ],
+   "row_count": 23,
+   "truncated": false,
+   "elapsed_ms": 3.43
+  },
+  "usage": {
+   "calls": 6,
+   "prompt_tokens": 5627,
+   "completion_tokens": 305,
+   "latency_ms": 0.0,
+   "by_tag": {
+    "generate": 5,
+    "judge": 1
+   }
+  },
+  "timings_ms": {
+   "retrieval": 2.2,
+   "generation": 6.0,
+   "distinguish": 22.9,
+   "verification": 23.3,
+   "total": 44.7
+  },
+  "sample": true
+ },
+ {
+  "id": "7f3f5466c7fb",
+  "database": "shop",
+  "question": "How much did customers in Mumbai pay in total?",
+  "evidence": "",
+  "dialect": "sqlite",
+  "retrieval": {
+   "mode": "full",
+   "tables": [
+    "customers",
+    "order_items",
+    "orders",
+    "payments",
+    "products"
+   ],
+   "columns": {
+    "customers": [
+     "customer_id",
+     "name",
+     "city",
+     "segment",
+     "signup_date"
+    ],
+    "order_items": [
+     "order_id",
+     "product_id",
+     "quantity",
+     "unit_price"
+    ],
+    "orders": [
+     "order_id",
+     "customer_id",
+     "order_date",
+     "status",
+     "total_amount"
+    ],
+    "payments": [
+     "payment_id",
+     "order_id",
+     "paid_at",
+     "amount",
+     "method"
+    ],
+    "products": [
+     "product_id",
+     "name",
+     "category",
+     "price"
+    ]
+   },
+   "table_scores": {},
+   "bridge_tables": [],
+   "value_matches": [
+    {
+     "table": "customers",
+     "column": "city",
+     "value": "Mumbai",
+     "span": "Mumbai",
+     "score": 1.0
+    }
+   ]
+  },
+  "candidates": [
+   {
+    "id": 0,
+    "label": "A",
+    "model": "gemini-3.1-flash-lite",
+    "prompt": "direct",
+    "temperature": 0.0,
+    "served_model": "gemini-3.1-flash-lite",
+    "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+    "attempts": [
+     {
+      "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "SUM(p.amount)"
+     ],
+     "rows": [
+      [
+       1121911.0
+      ]
+     ],
+     "row_count": 1,
+     "truncated": false,
+     "elapsed_ms": 0.8
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 1,
+    "label": "B",
+    "model": "openai/gpt-oss-20b",
+    "prompt": "plan",
+    "temperature": 0.0,
+    "served_model": "openai/gpt-oss-20b",
+    "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+    "attempts": [
+     {
+      "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "SUM(p.amount)"
+     ],
+     "rows": [
+      [
+       1121911.0
+      ]
+     ],
+     "row_count": 1,
+     "truncated": false,
+     "elapsed_ms": 2.18
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 2,
+    "label": "C",
+    "model": "gemini-3.1-flash-lite",
+    "prompt": "decompose",
+    "temperature": 0.0,
+    "served_model": "gemini-3.1-flash-lite",
+    "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+    "attempts": [
+     {
+      "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "SUM(p.amount)"
+     ],
+     "rows": [
+      [
+       1121911.0
+      ]
+     ],
+     "row_count": 1,
+     "truncated": false,
+     "elapsed_ms": 1.33
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 3,
+    "label": "D",
+    "model": "openai/gpt-oss-20b",
+    "prompt": "direct",
+    "temperature": 0.7,
+    "served_model": "openai/gpt-oss-20b",
+    "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+    "attempts": [
+     {
+      "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "SUM(p.amount)"
+     ],
+     "rows": [
+      [
+       1121911.0
+      ]
+     ],
+     "row_count": 1,
+     "truncated": false,
+     "elapsed_ms": 2.92
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   },
+   {
+    "id": 4,
+    "label": "E",
+    "model": "gemini-3.1-flash-lite",
+    "prompt": "plan",
+    "temperature": 0.7,
+    "served_model": "gemini-3.1-flash-lite",
+    "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+    "attempts": [
+     {
+      "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+      "error": null,
+      "error_kind": null
+     }
+    ],
+    "result": {
+     "columns": [
+      "SUM(p.amount)"
+     ],
+     "rows": [
+      [
+       1121911.0
+      ]
+     ],
+     "row_count": 1,
+     "truncated": false,
+     "elapsed_ms": 0.7
+    },
+    "error": null,
+    "error_kind": null,
+    "cluster": 0
+   }
+  ],
+  "clusters": [
+   {
+    "id": 0,
+    "members": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "representative": 0,
+    "size": 5,
+    "representative_label": "A"
+   }
+  ],
+  "distinguishing": null,
+  "judge": {
+   "mode": "verify",
+   "choice": null,
+   "confidence": 0.9,
+   "reason": "",
+   "issues": [
+    "Potential double counting: if an order has multiple payments, summing payments after the join may count the same order more than once."
+   ],
+   "model": "openai/gpt-oss-20b",
+   "used_example": false
+  },
+  "judge_error": null,
+  "confidence": {
+   "score": 0.8859,
+   "features": {
+    "agreement": 1.0,
+    "margin": 1.0,
+    "valid_frac": 1.0,
+    "judge_support": 0.0,
+    "judge_confidence": 0.09999999999999998,
+    "example_found": 0.0
+   },
+   "threshold": 0.5,
+   "abstained": false
+  },
+  "clarifying_question": null,
+  "answer": {
+   "candidate": "A",
+   "sql": "SELECT SUM(p.amount)\nFROM payments p\nJOIN orders o ON p.order_id = o.order_id\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.city = 'Mumbai'\n  AND o.status = 'completed'",
+   "cluster": 0,
+   "columns": [
+    "SUM(p.amount)"
+   ],
+   "rows": [
+    [
+     1121911.0
+    ]
+   ],
+   "row_count": 1,
+   "truncated": false,
+   "elapsed_ms": 0.8
+  },
+  "usage": {
+   "calls": 6,
+   "prompt_tokens": 5470,
+   "completion_tokens": 285,
+   "latency_ms": 0.0,
+   "by_tag": {
+    "generate": 5,
+    "judge": 1
+   }
+  },
+  "timings_ms": {
+   "retrieval": 1.2,
+   "generation": 4.2,
+   "verification": 0.1,
+   "total": 5.7
+  },
+  "sample": true
+ }
+]

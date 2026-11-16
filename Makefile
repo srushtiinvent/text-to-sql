@@ -1,4 +1,4 @@
-.PHONY: install demo-db test api eval-demo eval-bird ablate calibrate
+.PHONY: install demo-db test api web web-build eval-demo eval-bird ablate calibrate
 
 install:
 	pip install -r requirements-dev.txt
@@ -11,6 +11,12 @@ test:
 
 api:
 	uvicorn api.main:app --reload --port 8000
+
+web:
+	cd web && npm install && npm run dev
+
+web-build:
+	cd web && npm install && npm run build
 
 eval-demo:
 	python -m eval.run --dataset data/demo/questions.json --db-root data/demo/databases --name demo

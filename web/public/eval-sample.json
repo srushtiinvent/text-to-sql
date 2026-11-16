@@ -1,0 +1,23 @@
+{
+  "name": "dev50 (snapshot)",
+  "snapshot": true,
+  "note": "Work in progress: 10 of these 50 questions failed because the free model quota ran out, not because of wrong SQL. On the 40 that ran, the pipeline scored 57.5%.",
+  "headline": {
+    "questions": 50,
+    "execution_accuracy": 0.46,
+    "first_candidate_accuracy": 0.48,
+    "majority_vote_accuracy": 0.48,
+    "oracle_accuracy": 0.52,
+    "threshold": 0.5,
+    "coverage_at_threshold": 0.74,
+    "accuracy_at_threshold": 0.5946
+  },
+  "breakdown": [
+    ["Correct", 22],
+    ["Judge rescued a wrong majority", 1],
+    ["Every candidate wrote wrong SQL", 14],
+    ["Quota ran out before any answer", 10],
+    ["Judge overruled a correct majority", 2],
+    ["Judge picked the wrong option", 1]
+  ]
+}

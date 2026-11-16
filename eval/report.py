@@ -12,7 +12,9 @@ def write_report(summary: dict, records: list[dict], out_dir: Path) -> None:
     lines = [
         f"# Eval report: {out_dir.name}",
         "",
-        f"{h['questions']} questions · errors: {summary['errors']} · skipped: {summary['skipped']}",
+        f"{h['questions']} questions · errors: {summary['errors']} · skipped: {summary['skipped']}"
+        + (f" · **{len(summary['infra_failures_pending'])} not yet scored (gateway failures; rerun to retry)**"
+           if summary.get("infra_failures_pending") else ""),
         "",
         "## Headline",
         "",
@@ -50,6 +52,9 @@ def write_report(summary: dict, records: list[dict], out_dir: Path) -> None:
         f"- Valid candidates per question: {g['avg_valid_candidates']}",
         f"- Result clusters per question: {g['avg_clusters']} (unanimous: {pct(g['unanimous_rate'])})",
         f"- Questions where self-repair was needed: {pct(g['repair_rate'])}",
+        f"- Candidate calls lost to gateway/LLM failures (429s, timeouts): {pct(g['llm_failure_rate'])}"
+        + (f" — **first-candidate baseline is understated by {g['first_candidate_llm_failures']} infra failures**"
+           if g['first_candidate_llm_failures'] else ""),
         "",
         "## Verification",
         "",

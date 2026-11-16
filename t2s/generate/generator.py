@@ -24,6 +24,7 @@ class Candidate:
     model: str
     prompt: str
     temperature: float
+    served_model: str = ""  # the model the gateway actually used (e.g. "auto" -> a real model)
     sql: str = ""
     attempts: list[Attempt] = field(default_factory=list)
     result: ResultSet | None = None
@@ -38,7 +39,7 @@ class Candidate:
     def to_dict(self, preview_rows: int) -> dict:
         return {
             "id": self.id, "label": self.label, "model": self.model, "prompt": self.prompt,
-            "temperature": self.temperature, "sql": self.sql,
+            "temperature": self.temperature, "served_model": self.served_model, "sql": self.sql,
             "attempts": [a.__dict__ for a in self.attempts],
             "result": self.result.preview(preview_rows) if self.result else None,
             "error": self.error, "error_kind": self.error_kind, "cluster": self.cluster,
@@ -81,6 +82,7 @@ async def _run_with_repairs(llm, cfg, executor, cand: Candidate, messages: list[
             return
         sql = extract_sql(resp.text)
         cand.sql = sql
+        cand.served_model = resp.model or cand.model
         try:
             result = await asyncio.to_thread(executor.run, sql)
         except ExecutionError as e:

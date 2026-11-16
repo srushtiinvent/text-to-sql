@@ -59,7 +59,7 @@ async def run_eval(cfg, dataset: str, db_root: str, out_dir: Path, *, limit: int
 
     owns_llm = llm is None
     llm = llm or GatewayLLM(cfg.gateway_url, cfg.gateway_key, cfg.gateway_timeout_s,
-                            cfg.gateway_max_retries)
+                            cfg.gateway_max_retries, cfg.gateway_requests_per_minute)
     pipeline = Pipeline(cfg, llm)
     gold_execs: dict[str, SQLiteExecutor] = {}
     sem = asyncio.Semaphore(cfg.eval_concurrency)
@@ -67,10 +67,19 @@ async def run_eval(cfg, dataset: str, db_root: str, out_dir: Path, *, limit: int
     started = time.perf_counter()
     finished = 0
 
+    pending: list[int] = []
+
     async def one(ex):
         nonlocal finished
         async with sem:
             record = await score_example(pipeline, cfg, ex, gold_execs)
+        if "infra_failure" in record:
+            pending.append(ex.question_id)
+            finished += 1
+            if not quiet:
+                print(f"[{finished}/{len(todo)}] ! q{ex.question_id} ({ex.db_id}) gateway failure, "
+                      f"will retry on next run: {record['infra_failure'][:120]}", flush=True)
+            return
         async with lock:
             trace = record.pop("_trace", None)
             with results_path.open("a", encoding="utf-8") as f:
@@ -91,8 +100,13 @@ async def run_eval(cfg, dataset: str, db_root: str, out_dir: Path, *, limit: int
         if owns_llm:
             await llm.aclose()
 
-    records = [json.loads(l) for l in results_path.read_text().splitlines() if l.strip()]
+    records = ([json.loads(l) for l in results_path.read_text().splitlines() if l.strip()]
+               if results_path.exists() else [])
     summary = summarize(records, threshold=cfg.confidence_threshold)
+    summary["infra_failures_pending"] = sorted(pending)
+    if pending and not quiet:
+        print(f"\n{len(pending)} questions hit gateway failures and were not scored. "
+              f"Run the same command again (e.g. after quotas reset) to retry them.")
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     write_report(summary, records, out_dir)
     return summary
@@ -119,6 +133,10 @@ async def score_example(pipeline, cfg, ex, gold_execs) -> dict:
     internal = trace["_internal"]
     cands, clusters, chosen, decision = (internal["candidates"], internal["clusters"],
                                          internal["chosen"], internal["decision"])
+    if cands and all(c.error_kind == "llm" for c in cands):
+        # Every candidate failed at the gateway: the models never ran. Not a wrong answer;
+        # leave it unrecorded so the next run of the same command retries it.
+        return {**base, "infra_failure": cands[0].error}
     by_id = {c.id: c for c in cands}
 
     def full_result(c):
@@ -142,14 +160,16 @@ async def score_example(pipeline, cfg, ex, gold_execs) -> dict:
         if decision.mode == "pick":
             reps = [by_id[clusters[0].representative], by_id[clusters[1].representative]]
             opts_correct = {r.label: cand_correct[r.id] for r in reps}
-            opt_models = {r.label: sorted({by_id[m].model for m in clusters[r.cluster].members})
+            opt_models = {r.label: sorted({by_id[m].served_model or by_id[m].model
+                                          for m in clusters[r.cluster].members})
                           for r in reps}
             judge_correct = (opts_correct.get(decision.choice, False) if any(opts_correct.values())
                              else decision.choice is None)
         else:
             rep = by_id[clusters[0].representative]
             opts_correct = {rep.label: cand_correct[rep.id]}
-            opt_models = {rep.label: sorted({by_id[m].model for m in clusters[0].members})}
+            opt_models = {rep.label: sorted({by_id[m].served_model or by_id[m].model
+                                            for m in clusters[0].members})}
             judge_correct = (decision.choice is not None) == cand_correct[rep.id]
         judge = {"mode": decision.mode, "choice": decision.choice, "model": decision.model,
                  "confidence": decision.confidence, "used_example": decision.used_example,
@@ -169,8 +189,9 @@ async def score_example(pipeline, cfg, ex, gold_execs) -> dict:
         "n_candidates": len(cands),
         "n_valid": sum(1 for c in cands if c.ok),
         "candidate_correct": [cand_correct[c.id] for c in cands],
-        "candidate_models": [c.model for c in cands],
+        "candidate_models": [c.served_model or c.model for c in cands],
         "candidate_repaired": [len(c.attempts) > 1 for c in cands],
+        "candidate_error_kinds": [c.error_kind for c in cands],
         "cluster_sizes": [cl.size for cl in clusters],
         "cluster_correct": cluster_correct,
         "majority_correct": bool(cluster_correct and cluster_correct[0]),

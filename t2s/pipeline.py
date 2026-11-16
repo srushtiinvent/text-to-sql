@@ -141,6 +141,7 @@ class Pipeline:
 
         example = None
         decision = None
+        judge_error = None
         chosen: int | None = clusters[0].id if clusters else None
 
         # 4. verification
@@ -159,20 +160,27 @@ class Pipeline:
                 await emit("distinguishing", {"example": trace["distinguishing"]})
             if cfg.judge:
                 previews = {c.label: _preview_text(c, 10) for c in (a, b)}
-                decision = await judge_pick(
-                    llm, cfg.judge_model, question=question, evidence=evidence,
-                    schema_text=retrieval.schema_text, options=sqls,
-                    example_text=example.render() if example else None, previews=previews)
-                if decision.choice is not None:
+                try:
+                    decision = await judge_pick(
+                        llm, cfg.judge_model, question=question, evidence=evidence,
+                        schema_text=retrieval.schema_text, options=sqls,
+                        example_text=example.render() if example else None, previews=previews)
+                except Exception as e:  # e.g. gateway 429: fall back to the vote, don't lose the question
+                    judge_error = f"{type(e).__name__}: {e}"
+                if decision is not None and decision.choice is not None:
                     chosen = next(c for c in (a, b) if c.label == decision.choice).cluster
         elif len(clusters) == 1 and cfg.judge and cfg.judge_verify_single:
             rep = by_id[clusters[0].representative]
-            decision = await judge_verify(
-                llm, cfg.judge_model, question=question, evidence=evidence,
-                schema_text=retrieval.schema_text, label=rep.label, sql=rep.sql,
-                preview=_preview_text(rep, 10), row_count=len(rep.result.rows))
+            try:
+                decision = await judge_verify(
+                    llm, cfg.judge_model, question=question, evidence=evidence,
+                    schema_text=retrieval.schema_text, label=rep.label, sql=rep.sql,
+                    preview=_preview_text(rep, 10), row_count=len(rep.result.rows))
+            except Exception as e:
+                judge_error = f"{type(e).__name__}: {e}"
         lap("verification", s)
         trace["judge"] = decision.to_dict() if decision else None
+        trace["judge_error"] = judge_error
         if decision:
             await emit("judge", trace["judge"])
 

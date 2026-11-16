@@ -126,6 +126,10 @@ def summarize(records: list[dict], threshold: float = 0.5) -> dict:
             "avg_clusters": _mean(len(r.get("cluster_sizes", [])) for r in scored),
             "unanimous_rate": _mean(len(r.get("cluster_sizes", [])) == 1 for r in scored),
             "repair_rate": _mean(any(r.get("candidate_repaired", [])) for r in scored),
+            # Infrastructure failures (gateway 429s, timeouts) are not model mistakes; report them apart.
+            "llm_failure_rate": _mean(k == "llm" for r in scored for k in r.get("candidate_error_kinds", [])),
+            "first_candidate_llm_failures": sum(1 for r in scored
+                                                if (r.get("candidate_error_kinds") or [None])[0] == "llm"),
         },
         "verification": {
             "distinguishing_found_rate": _mean(r.get("distinguishing_found", False)

@@ -147,3 +147,61 @@ def test_eval_harness_end_to_end(cfg, tmp_path, shop_db):
     s2 = asyncio.run(run_eval(five(cfg), str(root / "data/demo/questions.json"), str(db_root),
                               tmp_path / "run", llm=FakeLLM(responder), quiet=True))
     assert s2["headline"]["questions"] == 12
+
+
+def test_served_model_is_recorded(cfg):
+    class Routed(FakeLLM):
+        async def chat(self, messages, model, temperature=0.0, max_tokens=1024, tag=""):
+            r = await super().chat(messages, model, temperature, max_tokens, tag)
+            r.model = "provider/real-model" if model == "auto" else model
+            return r
+
+    def responder(messages, model, temp, tag):
+        if tag == "judge":
+            return '{"verdict": "pass", "confidence": 0.9}'
+        return "```sql\nSELECT COUNT(*) FROM customers\n```"
+
+    c = cfg.with_overrides(candidates=[CandidateSpec("auto", "direct", 0.0)])
+    t = asyncio.run(Pipeline(c, Routed(responder)).ask("shop", "How many customers?"))
+    assert t["candidates"][0]["model"] == "auto"
+    assert t["candidates"][0]["served_model"] == "provider/real-model"
+
+
+def test_judge_failure_does_not_lose_the_question(cfg):
+    def responder(messages, model, temp, tag):
+        if tag == "judge":
+            raise RuntimeError("429 Too Many Requests")
+        return "```sql\nSELECT COUNT(*) FROM customers WHERE city = 'Pune'\n```"
+
+    t = asyncio.run(Pipeline(five(cfg), FakeLLM(responder)).ask("shop", "How many customers live in Pune?"))
+    assert t["answer"] is not None and t["judge"] is None
+    assert "429" in t["judge_error"]
+
+
+def test_all_gateway_failures_are_retried_not_scored(cfg, tmp_path, shop_db):
+    from eval.run import run_eval
+
+    root = Path(__file__).resolve().parents[1]
+    db_root = tmp_path / "dbs"
+    (db_root / "shop").mkdir(parents=True)
+    (db_root / "shop" / "shop.sqlite").write_bytes(shop_db.read_bytes())
+    cfg.databases.clear()
+
+    def down(messages, model, temp, tag):
+        raise RuntimeError("429 Too Many Requests")
+
+    s = asyncio.run(run_eval(five(cfg), str(root / "data/demo/questions.json"), str(db_root),
+                             tmp_path / "run", limit=3, llm=FakeLLM(down), quiet=True))
+    assert s["headline"]["questions"] == 0 and len(s["infra_failures_pending"]) == 3
+
+    gold = {q["question"]: q["SQL"] for q in json.loads((root / "data/demo/questions.json").read_text())}
+
+    def up(messages, model, temp, tag):
+        if tag == "judge":
+            return '{"verdict": "pass", "confidence": 0.9}'
+        q = re.search(r"Question: (.*)", messages[1]["content"]).group(1).strip()
+        return f"```sql\n{gold[q]}\n```"
+
+    s = asyncio.run(run_eval(five(cfg), str(root / "data/demo/questions.json"), str(db_root),
+                             tmp_path / "run", limit=3, llm=FakeLLM(up), quiet=True))
+    assert s["headline"]["questions"] == 3 and s["infra_failures_pending"] == []

@@ -10,3 +10,7 @@ models/
 web/node_modules/
 web/dist/
 *.gguf
+
+# BIRD dataset databases (too large for GitHub; download separately)
+bird/dev_databases/
+*.sqlite

@@ -42,7 +42,8 @@ state: dict = {}
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    llm = GatewayLLM(cfg.gateway_url, cfg.gateway_key, cfg.gateway_timeout_s, cfg.gateway_max_retries)
+    llm = GatewayLLM(cfg.gateway_url, cfg.gateway_key, cfg.gateway_timeout_s, cfg.gateway_max_retries,
+                     cfg.gateway_requests_per_minute)
     state["pipeline"] = Pipeline(cfg, llm)
     yield
     await llm.aclose()

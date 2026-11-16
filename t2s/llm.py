@@ -54,8 +54,15 @@ class LLM(Protocol):
 class GatewayLLM:
     """OpenAI-format client for the LLM Gateway."""
 
-    def __init__(self, base_url: str, api_key: str, timeout_s: float = 60.0, max_retries: int = 2):
+    def __init__(self, base_url: str, api_key: str, timeout_s: float = 60.0, max_retries: int = 2,
+                 requests_per_minute: int = 0):
         import httpx  # imported lazily so the core package works without it in tests
+
+        # Client-side pacing: stay under the gateway key's per-minute limit instead of
+        # bursting into 429s. 0 disables it.
+        self.rpm = requests_per_minute
+        self._sent: list[float] = []
+        self._pace_lock = asyncio.Lock()
 
         self._client = httpx.AsyncClient(
             base_url=base_url.rstrip("/"),
@@ -82,9 +89,22 @@ class GatewayLLM:
         data = await self._post("/v1/embeddings", {"model": model, "input": texts})
         return [d["embedding"] for d in sorted(data["data"], key=lambda d: d["index"])]
 
+    async def _pace(self) -> None:
+        if self.rpm <= 0:
+            return
+        async with self._pace_lock:  # sliding 60 s window shared by all concurrent calls
+            while True:
+                now = time.monotonic()
+                self._sent = [t for t in self._sent if now - t < 60]
+                if len(self._sent) < self.rpm:
+                    self._sent.append(now)
+                    return
+                await asyncio.sleep(60 - (now - self._sent[0]) + 0.05)
+
     async def _post(self, path: str, body: dict) -> dict:
         last_exc: Exception | None = None
         for attempt in range(self.max_retries + 1):
+            await self._pace()
             start = time.perf_counter()
             try:
                 resp = await self._client.post(path, json=body)

@@ -66,3 +66,11 @@ def test_small_schema_uses_full_prompt(shop_db, cfg):
     schema = introspect_sqlite(shop_db)
     res = asyncio.run(Retriever(schema, None, cfg).retrieve("how many orders?"))
     assert res.mode == "full" and len(res.tables) == 5
+
+
+def test_composite_primary_key_rendered_as_one_constraint(shop_db):
+    from t2s.schema import render_schema
+
+    text = render_schema(introspect_sqlite(shop_db), ["order_items"])
+    assert 'PRIMARY KEY ("order_id", "product_id")' in text
+    assert '"order_id" INTEGER PRIMARY KEY' not in text

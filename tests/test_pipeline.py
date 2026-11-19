@@ -56,6 +56,7 @@ def test_disagreement_goes_to_judge_with_example(cfg):
 
 
 def test_judge_can_overrule_majority(cfg):
+    # 4-1 split: only allowed when override_margin is unlimited (-1).
     def responder(messages, model, temp, tag):
         if tag == "judge":
             c = messages[-1]["content"]
@@ -67,7 +68,8 @@ def test_judge_can_overrule_majority(cfg):
         # majority writes the BAD query
         return f"```sql\n{GOOD if model == 'other-model' else BAD}\n```"
 
-    t = asyncio.run(Pipeline(five(cfg), FakeLLM(responder)).ask(
+    c = five(cfg).with_overrides(judge_override_margin=-1)
+    t = asyncio.run(Pipeline(c, FakeLLM(responder)).ask(
         "shop", "Which customers spent more than 10,000 last month?", "October 2026"))
     assert t["answer"]["sql"] == GOOD
     assert t["confidence"]["features"]["agreement"] == 0.2
@@ -205,3 +207,106 @@ def test_all_gateway_failures_are_retried_not_scored(cfg, tmp_path, shop_db):
     s = asyncio.run(run_eval(five(cfg), str(root / "data/demo/questions.json"), str(db_root),
                              tmp_path / "run", limit=3, llm=FakeLLM(up), quiet=True))
     assert s["headline"]["questions"] == 3 and s["infra_failures_pending"] == []
+
+
+def _split_vote(cfg, margin, bad_is_majority):
+    """3 candidates write GOOD, 2 write BAD (or the reverse); the judge always picks BAD."""
+    def responder(messages, model, temp, tag):
+        if tag == "judge":
+            c = messages[-1]["content"]
+            labels = re.findall(r"Query (\w+):\n```", c)
+            bad = next((l for l in labels
+                        if "status" not in c.split(f"Query {l}:")[1].split("```")[1]), labels[0])
+            return json.dumps({"choice": bad, "confidence": 0.99, "reason": "x"})
+        if tag == "clarify":
+            return '{"question": "?"}'
+        user = messages[1]["content"]
+        minority = "Break the question" in user or ("plan" in user.lower() and temp > 0)
+        return f"```sql\n{BAD if minority != bad_is_majority else GOOD}\n```"
+
+    c = five(cfg).with_overrides(judge_override_margin=margin)
+    return asyncio.run(Pipeline(c, FakeLLM(responder)).ask(
+        "shop", "Which customers spent more than 10,000 last month?", "October 2026"))
+
+
+def test_judge_cannot_overrule_a_clear_majority(cfg):
+    t = _split_vote(cfg, margin=0, bad_is_majority=False)   # 3-2 split, ties only
+    assert t["answer"]["sql"] == GOOD                        # majority stands
+    assert t["judge_blocked"]["would_have_changed_answer"] is True
+    assert t["confidence"]["features"]["judge_support"] == 0.0
+
+
+def test_judge_decides_when_allowed(cfg):
+    t = _split_vote(cfg, margin=1, bad_is_majority=False)   # 3-2 is within the margin
+    assert t["answer"]["sql"] == BAD                         # judge wins
+    assert t["judge_blocked"]["would_have_changed_answer"] is False
+
+
+def test_judge_agreeing_with_the_majority_is_never_blocked(cfg):
+    t = _split_vote(cfg, margin=0, bad_is_majority=True)    # judge picks the majority
+    assert t["answer"]["sql"] == BAD
+    assert t["judge_blocked"]["would_have_changed_answer"] is False
+
+
+def _three_way(cfg, judge_choice, **over):
+    """Five candidates land in three clusters; the judge picks `judge_choice`."""
+    THIRD = GOOD.replace("> 10000", "> 15000")
+    asked = {}
+
+    def responder(messages, model, temp, tag):
+        if tag == "judge":
+            c = messages[-1]["content"]
+            labels = re.findall(r"Query (\w+):\n```", c)
+            asked.setdefault("orders", []).append(labels)
+            return json.dumps({"choice": judge_choice(labels), "confidence": 0.9, "reason": "x"})
+        if tag == "clarify":
+            return '{"question": "?"}'
+        user = messages[1]["content"]
+        if "Break the question" in user:
+            return f"```sql\n{THIRD}\n```"
+        if "plan" in user.lower() and temp > 0:
+            return f"```sql\n{BAD}\n```"
+        return f"```sql\n{GOOD}\n```"
+
+    c = five(cfg).with_overrides(judge_override_margin=-1, **over)
+    t = asyncio.run(Pipeline(c, FakeLLM(responder)).ask(
+        "shop", "Which customers spent more than 10,000 last month?", "October 2026"))
+    return t, asked
+
+
+def test_judge_can_reach_a_third_cluster(cfg):
+    # The third cluster is never the largest, so top-two judging could not pick it.
+    t, asked = _three_way(cfg, lambda labels: labels[-1])
+    assert len(t["clusters"]) == 3
+    assert len(asked["orders"][0]) == 3            # all three shown to the judge
+    assert t["judge"]["n_options"] == 3
+    assert t["answer"]["cluster"] == 2             # the smallest cluster won
+
+
+def test_top_two_only_cannot_reach_it(cfg):
+    t, _ = _three_way(cfg, lambda labels: labels[-1], judge_max_options=2)
+    assert t["judge"]["n_options"] == 2
+    assert t["answer"]["cluster"] in (0, 1)        # cluster 2 is unreachable
+
+
+def test_order_bias_check_drops_an_unstable_verdict(cfg):
+    # Always picking whatever is listed first is pure position bias: both asks disagree.
+    t, asked = _three_way(cfg, lambda labels: labels[0], judge_check_order_bias=True)
+    assert len(asked["orders"]) == 2
+    assert asked["orders"][1] == asked["orders"][0][::-1]   # second ask is reversed
+    assert t["judge"]["flipped"] is True
+    assert t["judge"]["choice"] is None                     # verdict dropped
+    assert t["answer"]["cluster"] == 0                      # majority stands
+
+
+def test_order_bias_check_keeps_a_stable_verdict(cfg):
+    stable = {}
+
+    def choose(labels):
+        stable.setdefault("pick", labels[-1])   # same label whichever order it appears in
+        return stable["pick"]
+
+    t, asked = _three_way(cfg, choose, judge_check_order_bias=True)
+    assert len(asked["orders"]) == 2
+    assert t["judge"]["flipped"] is False
+    assert t["judge"]["choice"] is not None

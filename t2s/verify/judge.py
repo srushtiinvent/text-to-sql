@@ -69,6 +69,9 @@ class JudgeDecision:
     model: str = ""
     raw: str = ""
     used_example: bool = False
+    n_options: int = 0          # how many clusters the judge could choose between
+    order_swapped: bool = False # options were presented in reverse cluster order
+    flipped: bool = False       # a second ask with the order reversed disagreed
 
     def to_dict(self) -> dict:
         d = self.__dict__.copy()
@@ -78,14 +81,24 @@ class JudgeDecision:
 
 async def judge_pick(llm, model: str, *, question: str, evidence: str, schema_text: str,
                      options: dict[str, str], example_text: str | None,
-                     previews: dict[str, str] | None = None) -> JudgeDecision:
-    opt_text = "\n\n".join(f"Query {label}:\n```sql\n{sql}\n```" for label, sql in options.items())
+                     previews: dict[str, str] | None = None,
+                     swap_order: bool = False) -> JudgeDecision:
+    """Choose between any number of candidate queries.
+
+    LLM judges are known to favour whichever option is listed first. `swap_order`
+    presents the same options in reverse, so the caller can ask twice and keep the
+    verdict only when both orders agree (see judge_pick_stable).
+    """
+    labels = list(options)
+    if swap_order:
+        labels = labels[::-1]
+    opt_text = "\n\n".join(f"Query {label}:\n```sql\n{options[label]}\n```" for label in labels)
     if example_text:
         example = ("These queries return different results. Here is a minimal example "
                    "that shows the difference:\n\n" + example_text)
     else:
         example = "Outputs on the real database:\n\n" + "\n\n".join(
-            f"Query {label}:\n{p}" for label, p in (previews or {}).items())
+            f"Query {label}:\n{(previews or {}).get(label, '')}" for label in labels)
     prompt = PICK.format(question=question, evidence=_ev(evidence), schema=schema_text,
                          options=opt_text, example=example)
     resp = await llm.chat([{"role": "system", "content": JUDGE_SYSTEM},
@@ -95,7 +108,30 @@ async def judge_pick(llm, model: str, *, question: str, evidence: str, schema_te
     if choice not in {k.upper() for k in options}:
         choice = None
     return JudgeDecision("pick", choice, _conf(data), str(data.get("reason", ""))[:500],
-                         model=resp.model, raw=resp.text, used_example=bool(example_text))
+                         model=resp.model, raw=resp.text, used_example=bool(example_text),
+                         n_options=len(options), order_swapped=swap_order)
+
+
+async def judge_pick_stable(llm, model: str, *, check_order_bias: bool, **kw) -> JudgeDecision:
+    """Ask once; with check_order_bias, ask again with the options reversed.
+
+    If the two answers disagree, the verdict is position bias rather than judgement,
+    so the decision is dropped (choice=None) and the majority stands. `flipped`
+    records it so the evaluation can report how often this happens.
+    """
+    first = await judge_pick(llm, model, **kw)
+    if not check_order_bias or first.choice is None:
+        return first
+    second = await judge_pick(llm, model, swap_order=True, **kw)
+    if second.choice == first.choice:
+        return first
+    original = first.choice
+    first.flipped = True
+    first.choice = None
+    first.reason = (f"Order bias: chose {original} first, "
+                    f"{second.choice or 'none'} with the options reversed. "
+                    f"Original reason: {first.reason}")[:500]
+    return first
 
 
 async def judge_verify(llm, model: str, *, question: str, evidence: str, schema_text: str,

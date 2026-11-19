@@ -38,6 +38,7 @@ def write_report(summary: dict, records: list[dict], out_dir: Path) -> None:
     for d, s in summary["by_difficulty"].items():
         lines.append(f"| {d} | {s['n']} | {pct(s['execution_accuracy'])} | {pct(s['oracle_accuracy'])} |")
     r, g, v, c = summary["retrieval"], summary["generation"], summary["verification"], summary["cost"]
+    sel = summary.get("selection", {})
     j = v["judge"]
     lines += [
         "",
@@ -56,6 +57,11 @@ def write_report(summary: dict, records: list[dict], out_dir: Path) -> None:
         + (f" — **first-candidate baseline is understated by {g['first_candidate_llm_failures']} infra failures**"
            if g['first_candidate_llm_failures'] else ""),
         "",
+        "## Selection",
+        "",
+        f"- Questions where the correct answer sat in a minority cluster: {sel.get('correct_in_minority_cluster')}",
+        f"- ...of those, ranked below the judge's option limit (unreachable): {sel.get('answer_outside_judge_options')}",
+        "",
         "## Verification",
         "",
         f"- Distinguishing example found when candidates disagreed: {pct(v['distinguishing_found_rate'])}",
@@ -64,6 +70,8 @@ def write_report(summary: dict, records: list[dict], out_dir: Path) -> None:
         f"with example {pct(j['pick']['with_example'])}, without {pct(j['pick']['without_example'])}",
         f"- Judge **verify**: catches {pct(j['verify']['catches_wrong_rate'])} of wrong unanimous answers, "
         f"false alarms on {pct(j['verify']['false_alarm_rate'])} of right ones (n={j['verify']['n']})",
+        f"- Order bias: verdict flipped when the options were reversed on "
+        f"{pct(j['order_bias']['flipped_rate'])} of {j['order_bias']['checked']} checked decisions",
         f"- Self-preference: picks its own model's option {pct(j['self_preference']['picks_own_model_rate'])} "
         f"of the time; when that option is wrong, still picks it {pct(j['self_preference']['picks_own_when_wrong_rate'])} "
         f"(n={j['self_preference']['comparable_decisions']})",

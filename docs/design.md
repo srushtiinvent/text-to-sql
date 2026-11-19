@@ -76,7 +76,13 @@ The gateway caches identical conversations. Two candidates with the same model a
 
 ## 12. Known limitations / next steps
 
-- Distinguishing examples only for the top two clusters; a tournament over more clusters is a natural extension.
+- The judge now ranks up to `judge_max_options` clusters (default 4), not two. On BIRD dev
+  the old top-two limit made a correct minority cluster unreachable on 2 of 50 questions.
+  The distinguishing example still compares only the top two, since shrinking a database
+  that separates N queries at once is a harder problem than the pairwise case.
+- `check_order_bias` asks the judge twice with the options reversed and drops the verdict
+  when it flips, because LLM judges tend to favour whichever option is listed first. The
+  evaluation reports the flip rate alongside self-preference.
 - The rate limiter is in-process memory (fine for one instance; multiple instances would need shared state).
 - Postgres opens a connection per query (simple and thread-safe); use `psycopg_pool` under load.
 - No multi-turn conversation yet: a clarifying question's answer isn't fed back automatically.

@@ -158,7 +158,7 @@ async def score_example(pipeline, cfg, ex, gold_execs) -> dict:
     judge = None
     if decision is not None:
         if decision.mode == "pick":
-            reps = [by_id[clusters[0].representative], by_id[clusters[1].representative]]
+            reps = [by_id[c.representative] for c in clusters[: max(2, decision.n_options or 2)]]
             opts_correct = {r.label: cand_correct[r.id] for r in reps}
             opt_models = {r.label: sorted({by_id[m].served_model or by_id[m].model
                                           for m in clusters[r.cluster].members})
@@ -173,6 +173,7 @@ async def score_example(pipeline, cfg, ex, gold_execs) -> dict:
             judge_correct = (decision.choice is not None) == cand_correct[rep.id]
         judge = {"mode": decision.mode, "choice": decision.choice, "model": decision.model,
                  "confidence": decision.confidence, "used_example": decision.used_example,
+                 "n_options": decision.n_options, "flipped": decision.flipped,
                  "options_correct": opts_correct, "option_models": opt_models,
                  "correct": judge_correct}
 
@@ -198,6 +199,7 @@ async def score_example(pipeline, cfg, ex, gold_execs) -> dict:
         "first_candidate_correct": cand_correct.get(0, False),
         "any_candidate_correct": any(cand_correct.values()),
         "judge": judge,
+        "correct_cluster_index": next((i for i, ok in enumerate(cluster_correct) if ok), None),
         "distinguishing_found": bool(trace.get("distinguishing")),
         "distinguishing_rows": (trace.get("distinguishing") or {}).get("rows_total"),
         "retrieval": {"mode": trace["retrieval"]["mode"], "tables": sorted(retrieved),

@@ -21,7 +21,7 @@ embeddings = ""          # e.g. "text-embedding-004"; leave empty to use BM25 + 
 [generation]
 max_repairs = 2              # self-correction rounds after an execution error
 repair_empty_result = false  # ask the model to re-check queries that return 0 rows (ablate this)
-max_tokens = 1024
+max_tokens = 600   # SQL never needs more, and smaller requests fit a provider's TPM budget
 
 # Diversity comes from prompt style, temperature and model. 5 candidates is a good default.
 [[generation.candidates]]
@@ -67,6 +67,15 @@ preview_rows = 20
 distinguish = true
 judge = true
 judge_verify_single = true
+# The judge may change the answer only when the top two clusters are within this many
+# votes. 0 = ties only, 1 = also 3-2, -1 = the judge can overrule any majority.
+override_margin = 1
+# How many result clusters the judge chooses between. 2 was the old behaviour and made a
+# correct minority cluster unreachable; 4 covers almost every split seen on BIRD dev.
+judge_max_options = 4
+# Ask the judge again with the options reversed and drop the verdict if it flips.
+# Costs one extra call per disagreement; measures position bias.
+check_order_bias = false
 sample_sizes = [8, 32, 128, 512, 2048]
 ddmin_budget = 250
 seed = 7

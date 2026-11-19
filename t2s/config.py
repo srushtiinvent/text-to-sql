@@ -66,6 +66,13 @@ class Config:
     distinguish: bool = True
     judge: bool = True
     judge_verify_single: bool = True
+    # The judge may change the answer only when the top two result clusters are within
+    # this many votes. 0 = ties only; -1 = always (the judge can overrule any majority).
+    judge_override_margin: int = 1
+    # How many result clusters the judge chooses between (2 = the old top-two behaviour).
+    judge_max_options: int = 4
+    # Ask the judge a second time with the options reversed; drop the verdict if it flips.
+    judge_check_order_bias: bool = False
     sample_sizes: list[int] = field(default_factory=lambda: [8, 32, 128, 512, 2048])
     ddmin_budget: int = 250
     distinguish_seed: int = 7
@@ -120,7 +127,10 @@ _SECTION_KEYS = {
                   "use_embeddings": "use_embeddings"},
     "execution": {"timeout_s": "timeout_s", "row_limit": "row_limit", "preview_rows": "preview_rows"},
     "verify": {"distinguish": "distinguish", "judge": "judge",
-               "judge_verify_single": "judge_verify_single", "sample_sizes": "sample_sizes",
+               "judge_verify_single": "judge_verify_single",
+               "judge_override_margin": "judge_override_margin",
+               "judge_max_options": "judge_max_options",
+               "check_order_bias": "judge_check_order_bias", "sample_sizes": "sample_sizes",
                "ddmin_budget": "ddmin_budget", "seed": "distinguish_seed"},
     "confidence": {"threshold": "confidence_threshold", "weights_path": "confidence_weights_path"},
     "eval": {"concurrency": "eval_concurrency"},

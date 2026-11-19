@@ -29,7 +29,7 @@ from .schema import introspect_postgres, introspect_sqlite, load_descriptions, q
 from .verify.cluster import cluster_candidates
 from .verify.distinguish import (PostgresRowSource, SQLiteRowSource,
                                  find_distinguishing_example)
-from .verify.judge import clarifying_question, judge_pick, judge_verify
+from .verify.judge import (clarifying_question, judge_pick_stable, judge_verify)
 
 EventFn = Callable[[str, dict], Awaitable[None]]
 
@@ -142,33 +142,51 @@ class Pipeline:
         example = None
         decision = None
         judge_error = None
+        trace["judge_blocked"] = None
         chosen: int | None = clusters[0].id if clusters else None
 
         # 4. verification
         s = time.perf_counter()
         if len(clusters) >= 2:
-            a, b = by_id[clusters[0].representative], by_id[clusters[1].representative]
-            sqls = {a.label: a.sql, b.label: b.sql}
+            # Every cluster is a real candidate answer. Showing the judge only the top two
+            # made a correct minority cluster unreachable (measured: 2 of 50 on BIRD dev).
+            reps = [by_id[c.representative] for c in clusters[: cfg.judge_max_options]]
+            a, b = reps[0], reps[1]
+            sqls = {r.label: r.sql for r in reps}
             if cfg.distinguish:
                 ds = time.perf_counter()
                 example = await asyncio.to_thread(
-                    find_distinguishing_example, ctx.row_source, ctx.schema, sqls,
+                    find_distinguishing_example, ctx.row_source, ctx.schema,
+                    {a.label: a.sql, b.label: b.sql},
                     sample_sizes=cfg.sample_sizes, budget=cfg.ddmin_budget,
                     seed=cfg.distinguish_seed, timeout_s=min(cfg.timeout_s, 5.0))
                 lap("distinguish", ds)
                 trace["distinguishing"] = example.to_dict() if example else None
                 await emit("distinguishing", {"example": trace["distinguishing"]})
             if cfg.judge:
-                previews = {c.label: _preview_text(c, 10) for c in (a, b)}
+                previews = {r.label: _preview_text(r, 10) for r in reps}
                 try:
-                    decision = await judge_pick(
-                        llm, cfg.judge_model, question=question, evidence=evidence,
+                    decision = await judge_pick_stable(
+                        llm, cfg.judge_model, check_order_bias=cfg.judge_check_order_bias,
+                        question=question, evidence=evidence,
                         schema_text=retrieval.schema_text, options=sqls,
                         example_text=example.render() if example else None, previews=previews)
                 except Exception as e:  # e.g. gateway 429: fall back to the vote, don't lose the question
                     judge_error = f"{type(e).__name__}: {e}"
+                margin = clusters[0].size - clusters[1].size
+                may_override = cfg.judge_override_margin < 0 or margin <= cfg.judge_override_margin
+                judge_overruled = False
                 if decision is not None and decision.choice is not None:
-                    chosen = next(c for c in (a, b) if c.label == decision.choice).cluster
+                    picked = next(r for r in reps if r.label == decision.choice).cluster
+                    if picked == chosen or may_override:
+                        chosen = picked
+                    else:
+                        # Several independent samples agreeing is stronger evidence than one
+                        # model's opinion, so a clear majority stands and the judge only
+                        # lowers the confidence score.
+                        judge_overruled = True
+                trace["judge_blocked"] = {"margin": margin, "allowed": may_override,
+                                          "would_have_changed_answer": judge_overruled}
         elif len(clusters) == 1 and cfg.judge and cfg.judge_verify_single:
             rep = by_id[clusters[0].representative]
             try:
@@ -185,7 +203,8 @@ class Pipeline:
             await emit("judge", trace["judge"])
 
         # 5. confidence
-        feats = conf.features(len(cands), clusters, chosen, decision)
+        feats = conf.features(len(cands), clusters, chosen, decision,
+                              judge_blocked=bool((trace.get("judge_blocked") or {}).get("would_have_changed_answer")))
         score = conf.score(feats, self.weights)
         abstained = chosen is None or score < cfg.confidence_threshold
         trace["confidence"] = {"score": round(score, 4), "features": feats,

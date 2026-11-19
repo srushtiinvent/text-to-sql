@@ -17,7 +17,8 @@ DEFAULT_WEIGHTS = {"bias": -2.0, "agreement": 2.5, "margin": 1.0, "valid_frac": 
                    "judge_support": 2.0, "judge_confidence": 0.5, "example_found": -0.3}
 
 
-def features(n_candidates: int, clusters, chosen_cluster: int | None, judge) -> dict[str, float]:
+def features(n_candidates: int, clusters, chosen_cluster: int | None, judge,
+             judge_blocked: bool = False) -> dict[str, float]:
     n_valid = sum(c.size for c in clusters)
     if chosen_cluster is None or not clusters:
         return {f: 0.0 for f in FEATURES}
@@ -25,6 +26,8 @@ def features(n_candidates: int, clusters, chosen_cluster: int | None, judge) -> 
     best_other = max((c.size for c in clusters if c.id != chosen_cluster), default=0)
     if judge is None:
         support, jconf = 0.5, 0.5
+    elif judge_blocked:  # the judge disagreed with the answer we are giving
+        support, jconf = 0.0, judge.confidence
     else:
         support = 1.0 if judge.choice is not None else 0.0
         jconf = judge.confidence if judge.choice is not None else 1 - judge.confidence

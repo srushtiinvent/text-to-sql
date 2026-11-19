@@ -74,6 +74,10 @@ def judge_stats(records) -> dict:
         if not d["options_correct"].get(own[0], False):
             own_wrong_total += 1
             own_wrong_picked += d["choice"] == own[0]
+    out["order_bias"] = {
+        "checked": sum(1 for d in picks if d.get("flipped") is not None),
+        "flipped_rate": _mo(bool(d.get("flipped")) for d in picks),
+    }
     out["self_preference"] = {
         "comparable_decisions": own_total,
         "picks_own_model_rate": round(own_picked / own_total, 4) if own_total else None,
@@ -130,6 +134,15 @@ def summarize(records: list[dict], threshold: float = 0.5) -> dict:
             "llm_failure_rate": _mean(k == "llm" for r in scored for k in r.get("candidate_error_kinds", [])),
             "first_candidate_llm_failures": sum(1 for r in scored
                                                 if (r.get("candidate_error_kinds") or [None])[0] == "llm"),
+        },
+        "selection": {
+            # A correct cluster ranked below judge_max_options can never be chosen.
+            "answer_outside_judge_options": sum(
+                1 for r in scored
+                if r.get("correct_cluster_index") is not None
+                and r.get("judge", {}) and (r["judge"].get("n_options") or 2) <= r["correct_cluster_index"]),
+            "correct_in_minority_cluster": sum(
+                1 for r in scored if (r.get("correct_cluster_index") or 0) > 0),
         },
         "verification": {
             "distinguishing_found_rate": _mean(r.get("distinguishing_found", False)

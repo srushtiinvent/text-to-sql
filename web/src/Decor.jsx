@@ -22,7 +22,7 @@ function Cloud({ cls, size, style }) {
 }
 
 export function Heart({ size = 22, style }) {
-  return <Px d={HEART} fill="var(--c1)" size={[size, Math.round(size * 0.9)]} box="0 0 10 9" style={style} />
+  return <Px d={HEART} fill="var(--heart)" size={[size, Math.round(size * 0.9)]} box="0 0 10 9" style={style} />
 }
 
 export default function Decor() {
@@ -37,16 +37,16 @@ export default function Decor() {
 
       <Cloud cls="only-day drift" size={[112, 56]} style={{ left: 0, top: 70, animationDelay: '-6s' }} />
       <Cloud cls="only-day drift b" size={[80, 40]} style={{ left: 0, top: 880 }} />
-      <Px cls="only-day bob" d={HEART} fill="var(--c1)" size={[30, 27]} box="0 0 10 9" style={{ right: '4%', top: 560 }} />
-      <Px cls="only-day rise" d={HEART} fill="var(--c1)" size={[30, 27]} box="0 0 10 9" style={{ left: '3%', top: 620 }} />
-      <Px cls="only-day rise b" d={HEART} fill="var(--c1)" size={[22, 20]} box="0 0 10 9" style={{ right: '2%', top: 980 }} />
-      <Px cls="only-day rise c" d={HEART} fill="var(--c1)" size={[26, 23]} box="0 0 10 9" style={{ left: '5%', top: 1500 }} />
+      <Px cls="only-day bob" d={HEART} fill="var(--heart)" size={[30, 27]} box="0 0 10 9" style={{ right: '4%', top: 560 }} />
+      <Px cls="only-day rise" d={HEART} fill="var(--heart)" size={[30, 27]} box="0 0 10 9" style={{ left: '3%', top: 620 }} />
+      <Px cls="only-day rise b" d={HEART} fill="var(--heart)" size={[22, 20]} box="0 0 10 9" style={{ right: '2%', top: 980 }} />
+      <Px cls="only-day rise c" d={HEART} fill="var(--heart)" size={[26, 23]} box="0 0 10 9" style={{ left: '5%', top: 1500 }} />
 
       <svg className="only-night bob" width="72" height="72" viewBox="0 0 12 12" shapeRendering="crispEdges" style={{ right: '3%', top: 520 }}>
-        <path fill="#FF9CCB" d="M4 1h4v1h2v2h1v4h-1v2H8v1H4v-1H2V8H1V4h1V2h2z" />
-        <path fill="#D96FA6" d="M4 3h2v2H4zM7 6h2v2H7zM3 7h1v1H3z" />
+        <path fill="#5F8FC4" d="M4 1h4v1h2v2h1v4h-1v2H8v1H4v-1H2V8H1V4h1V2h2z" />
+        <path fill="#3F6898" d="M4 3h2v2H4zM7 6h2v2H7zM3 7h1v1H3z" />
       </svg>
-      <Px cls="only-night tw c" d={MOON} fill="#FFD86B" size={[44, 44]} box={spark} style={{ left: '3%', top: 430 }} />
+      <Px cls="only-night tw c" d={MOON} fill="var(--deco)" size={[44, 44]} box={spark} style={{ left: '3%', top: 430 }} />
       <Px cls="only-night rise" d={SPARK} fill="var(--deco)" size={[22, 22]} box={spark} style={{ left: '3%', top: 980 }} />
       <Px cls="only-night rise b" d={SPARK} fill="var(--deco)" size={[18, 18]} box={spark} style={{ right: '2%', top: 1500 }} />
     </div>

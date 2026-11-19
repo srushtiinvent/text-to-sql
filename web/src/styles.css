@@ -15,12 +15,12 @@ body { margin: 0; }
   box-sizing: border-box;
 }
 .t2s.day {
-  --bg: #FFF6FA; --bg2: #FDEAF1; --panel: #FFFBFD; --panel2: #FCE3EC;
-  --ink: #33102A; --muted: #63304E; --line: #8A2755;
-  --bar: #EE86AE; --barink: #33102A; --btn: #8A2755; --btnink: #FFFFFF; --shadow: #C0457A;
-  --c1: #8A2755; --c1ink: #FFFFFF; --c2: #D9CBF5; --c2ink: #2F1D5C;
+  --bg: #FFFBEB; --bg2: #E3EFFB; --panel: #FFFEF8; --panel2: #E6F0FB;
+  --ink: #142847; --muted: #3D5578; --line: #2D4F80;
+  --bar: #FFE38A; --barink: #142847; --btn: #2D4F80; --btnink: #FFFFFF; --shadow: #8DB8E8;
+  --c1: #7FB2EA; --c1ink: #0F2240; --c2: #FFE38A; --c2ink: #4A3800;
   --ok: #2F6B4A; --okbg: #DDEFD9; --warn: #8A4B00; --warnbg: #FFE9C7;
-  --code: #FFF3F8; --deco: #E0A400; --deco2: #2F8FD6; --deco3: #1E9E6A;
+  --code: #F4F8FE; --deco: #E0A400; --deco2: #4F95DB; --deco3: #1E9E6A; --heart: #F4A3C4;
   background-image:
     linear-gradient(45deg, var(--bg2) 25%, transparent 25%, transparent 75%, var(--bg2) 75%),
     linear-gradient(45deg, var(--bg2) 25%, transparent 25%, transparent 75%, var(--bg2) 75%);
@@ -28,17 +28,17 @@ body { margin: 0; }
   background-position: 0 0, 16px 16px;
 }
 .t2s.night {
-  --bg: #08061A; --bg2: #120F2A; --panel: #211D45; --panel2: #2E2960;
-  --ink: #FFFFFF; --muted: #CFC8F5; --line: #B3A1FF;
-  --bar: #5A45C4; --barink: #FFFFFF; --btn: #FF8FC7; --btnink: #2A0A26; --shadow: #5A45C4;
-  --c1: #FF8FC7; --c1ink: #2A0A26; --c2: #3A3378; --c2ink: #FFFFFF;
-  --ok: #8FE6B0; --okbg: #173527; --warn: #FFD86B; --warnbg: #3A2E0E;
-  --code: #120F2A; --deco: #FFD86B; --deco2: #7FE3E0; --deco3: #8FE6B0;
+  --bg: #0E1626; --bg2: #121C2E; --panel: #172235; --panel2: #1F2D44;
+  --ink: #E8EEF7; --muted: #A9B8CE; --line: #5A7398;
+  --bar: #C4AA6B; --barink: #1C1606; --btn: #7FB2EA; --btnink: #0B1A30; --shadow: #070B14;
+  --c1: #7FB2EA; --c1ink: #0B1A30; --c2: #D2BC82; --c2ink: #2E2406;
+  --ok: #8FD6A8; --okbg: #16302A; --warn: #F2D27A; --warnbg: #2E2610;
+  --code: #111B2C; --deco: #F2D27A; --deco2: #7FB2EA; --deco3: #8FD6A8; --heart: #E3A3BC;
   background-image:
-    radial-gradient(#FFFFFF 1.5px, transparent 2px),
-    radial-gradient(#B3A1FF 1.5px, transparent 2px);
-  background-size: 120px 120px, 90px 90px;
-  background-position: 10px 20px, 50px 70px;
+    radial-gradient(rgba(232, 238, 247, .45) 1px, transparent 1.5px),
+    radial-gradient(rgba(127, 178, 234, .3) 1px, transparent 1.5px);
+  background-size: 180px 180px, 130px 130px;
+  background-position: 10px 20px, 70px 90px;
 }
 
 .t2s .only-night, .t2s.night .only-day { display: none; }

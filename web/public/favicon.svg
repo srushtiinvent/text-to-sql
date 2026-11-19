@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" shape-rendering="crispEdges">
+  <!-- Same pixel art as <Logo /> in src/Decor.jsx, with each theme's colours fixed. -->
+  <style>
+    .frame, .cursor { fill: #2D4F80; }
+    .paper { fill: #FFFEF8; }
+    .lines { fill: #2D4F80; }
+    @media (prefers-color-scheme: dark) {
+      .frame, .cursor { fill: #5A7398; }
+      .paper { fill: #172235; }
+      .lines { fill: #7FB2EA; }
+    }
+  </style>
+  <path class="frame" d="M1 1h10v10H1z" />
+  <path class="paper" d="M2 2h8v8H2z" />
+  <path class="lines" d="M3 3h6v1H3zM3 5h4v1H3zM3 7h5v1H3z" />
+  <path class="cursor" d="M8 6h1v1h1v1H9v1H8V8H7V7h1z" />
+</svg>
